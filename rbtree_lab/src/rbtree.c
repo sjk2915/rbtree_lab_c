@@ -10,31 +10,18 @@ rbtree *new_rbtree(void) {
   return p;
 }
 
-void delete_rbtree(rbtree *t) {
+void postorder_traverse(rbtree *t, node_t *node)
+{
+  if (node == t->nil) return;
+  postorder_traverse(t, node->left);
+  postorder_traverse(t, node->right);
+  free(node);
+}
+
+void delete_rbtree(rbtree *t)
+{
   // TODO: reclaim the tree nodes's memory
-  node_t *cur = t->root;
-  while (cur != t->nil)
-  {
-    if (cur->left != t->nil)
-      cur = cur->left;
-    else if (cur->right != t->nil)
-      cur = cur->right;
-    else 
-    {
-      node_t *parent = cur->parent;
-      if (parent != t->nil)
-      {
-        if (parent->left == cur)
-          parent->left = t->nil;
-        else
-          parent->right = t->nil;
-      }
-      else
-        t->root = t->nil;
-      free(cur);
-      cur = parent;
-    }
-  }
+  postorder_traverse(t, t->root);
   free(t->nil);
   free(t);
 }
@@ -147,26 +134,26 @@ node_t *rbtree_insert(rbtree *t, const key_t key) {
   z->left = t->nil;
   z->right = t->nil;
 
-  node_t *x = t->root;
-  node_t *y = t->nil;
-  while (x != t->nil)
+  node_t *cur = t->root;
+  node_t *pre = t->nil;
+  while (cur != t->nil)
   {
-    y = x;
-    if (z->key < x->key)
-      x = x->left;
+    pre = cur;
+    if (z->key < cur->key)
+      cur = cur->left;
     else
-      x = x->right;
+      cur = cur->right;
   }
-  z->parent = y;
-  if (y == t->nil)
+  z->parent = pre;
+  if (pre == t->nil)
     t->root = z;
-  else if (z->key < y->key)
-    y->left = z;
+  else if (z->key < pre->key)
+    pre->left = z;
   else
-    y->right = z;
+    pre->right = z;
 
   rbtree_insert_fixup(t, z);
-  return t->root;
+  return z;
 }
 
 node_t *rbtree_find(const rbtree *t, const key_t key) {
@@ -262,7 +249,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
       {
         w->color = RBTREE_BLACK;
         x->parent->color = RBTREE_RED;
-        left_rotate(t, x->parent);
+        right_rotate(t, x->parent);
         w = x->parent->left;
       }
       // 케이스 2. x의 형제 w가 블랙이고 w의 자식이 모두 블랙
