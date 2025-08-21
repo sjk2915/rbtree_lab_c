@@ -10,7 +10,7 @@ rbtree *new_rbtree(void) {
   return p;
 }
 
-void postorder_traverse(rbtree *t, node_t *node)
+static void postorder_traverse(rbtree *t, node_t *node)
 {
   if (node == t->nil) return;
   postorder_traverse(t, node->left);
@@ -26,7 +26,7 @@ void delete_rbtree(rbtree *t)
   free(t);
 }
 
-void left_rotate(rbtree *t, node_t *x)
+static void left_rotate(rbtree *t, node_t *x)
 {
   node_t *y = x->right;
   x->right = y->left;
@@ -46,7 +46,7 @@ void left_rotate(rbtree *t, node_t *x)
   x->parent = y;
 }
 
-void right_rotate(rbtree *t, node_t *y)
+static void right_rotate(rbtree *t, node_t *y)
 {
   node_t *x = y->left;
   y->left = x->right;
@@ -66,7 +66,7 @@ void right_rotate(rbtree *t, node_t *y)
   y->parent = x;
 }
 
-void rbtree_insert_fixup(rbtree *t, node_t *z)
+static void rbtree_insert_fixup(rbtree *t, node_t *z)
 {
   while (z->parent->color == RBTREE_RED)
   {
@@ -84,7 +84,7 @@ void rbtree_insert_fixup(rbtree *t, node_t *z)
       else
       {
         // 케이스 2. z의 삼촌 y가 블랙이며 z가 오른쪽 자식
-        // 이때 좌회전을 통해 케이스 3으로 진입가능
+        // 좌회전을 통해 케이스 3으로 진입가능
         if (z == z->parent->right)
         {
           z = z->parent;
@@ -110,7 +110,7 @@ void rbtree_insert_fixup(rbtree *t, node_t *z)
       else
       {
         // 케이스 2. z의 삼촌 y가 블랙이며 z가 왼쪽 자식
-        // 이때 우회전을 통해 케이스 3으로 진입가능
+        // 우회전을 통해 케이스 3으로 진입가능
         if (z == z->parent->left)
         {
           z = z->parent;
@@ -123,6 +123,7 @@ void rbtree_insert_fixup(rbtree *t, node_t *z)
       }
     }
   }
+  // 규칙 2번 수정
   t->root->color = RBTREE_BLACK;
 }
 
@@ -190,7 +191,7 @@ node_t *rbtree_max(const rbtree *t) {
   return cur;
 }
 
-void rbtree_transplant(rbtree *t, node_t *u, node_t *v)
+static void rbtree_transplant(rbtree *t, node_t *u, node_t *v)
 {
   if (u->parent == t->nil)
     t->root = v;
@@ -201,14 +202,16 @@ void rbtree_transplant(rbtree *t, node_t *u, node_t *v)
   v->parent = u->parent;
 }
 
-void rbtree_delete_fixup(rbtree *t, node_t *x)
+static void rbtree_delete_fixup(rbtree *t, node_t *x)
 {
+  // 규칙 1번 수정
   while (x != t->root && x->color == RBTREE_BLACK)
   {
     if (x == x->parent->left)
     {
       node_t *w = x->parent->right;
       // 케이스 1. x의 형제 w가 레드
+      // w와 p의 색을 바꾸고 회전시켜서 케이스 2, 3, 4로 진입가능
       if (w->color == RBTREE_RED)
       {
         w->color = RBTREE_BLACK;
@@ -217,7 +220,8 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
         w = x->parent->right;
       }
       // 케이스 2. x의 형제 w가 블랙이고 w의 자식이 모두 블랙
-      else if (w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK)
+      // w와 x에서 둘다 블랙을 제거후 p에 블랙을 추가
+      if (w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK)
       {
         w->color = RBTREE_RED;
         x = x->parent;
@@ -225,7 +229,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
       else
       {
         // 케이스 3. x의 형제 w가 블랙이고 w의 왼쪽 자식은 레드, 오른쪽 자식은 블랙
-        // 우회전을 통해 케이스 4로 진입가능
+        // w와 w->left의 색을 바꾸고 우회전을 통해 케이스 4로 진입가능
         if (w->right->color == RBTREE_BLACK)
         {
           w->left->color = RBTREE_BLACK;
@@ -234,6 +238,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
           w = x->parent->right;
         }
         // 케이스 4. x의 형제 w는 블랙이고 w의 오른쪽 자식은 레드
+        // p를 블랙으로 바꾸고 x의 루트에 편입시켜 더블블랙을 해소하고 부족해진 p루트의 bh는 w.r이 블랙이 되서 해결됨
         w->color = x->parent->color;
         x->parent->color = RBTREE_BLACK;
         w->right->color = RBTREE_BLACK;
@@ -253,7 +258,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
         w = x->parent->left;
       }
       // 케이스 2. x의 형제 w가 블랙이고 w의 자식이 모두 블랙
-      else if (w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK)
+      if (w->left->color == RBTREE_BLACK && w->right->color == RBTREE_BLACK)
       {
         w->color = RBTREE_RED;
         x = x->parent;
@@ -278,6 +283,7 @@ void rbtree_delete_fixup(rbtree *t, node_t *x)
       }
     }
   }
+  // 규칙 2번, 4번 수정
   x->color = RBTREE_BLACK;
 }
 
@@ -325,7 +331,7 @@ int rbtree_erase(rbtree *t, node_t *z) {
   return 0;
 }
 
-void inorder_traverse(const rbtree *t, node_t *node, key_t *arr, int *idx)
+static void inorder_traverse(const rbtree *t, node_t *node, key_t *arr, int *idx)
 {
   if (node == t->nil) return;
   inorder_traverse(t, node->left, arr, idx);
